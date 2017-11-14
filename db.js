@@ -5,7 +5,8 @@ var Values = mongoose.model('values', schema);
 
 module.exports = {
     connectDB : function() {
-        mongoose.connect(process.env.MONGODB_ADDON_URI);
+        mongoose.connect(process.env.MONGODB_ADDON_URI,{useMongoClient:true});
+        console.log('connected!');
     },
 
     getVal : function(res) {

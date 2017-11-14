@@ -44,18 +44,26 @@ if (app.get('env') === 'development') {
     });
   });
   app.locals.pretty = true;
-}
+}else{
 
 // production error handler
 // no stacktraces leaked to user
-app.use(function(err, req, res, next) {
-  res.status(err.status || 500);
-  res.render('error', {
-    message: err.message,
-    error: {}
-  });
-});
+    app.use(function(err, req, res, next) {
+        res.status(err.status || 500);
+        res.render('error', {
+            message: err.message,
+            error: {}
+        });
+    });
+}
+
 
 mongodb.connectDB();
 
 module.exports = app;
+
+if (!module.parent) {
+    var port = 3000;
+    app.listen(port);
+    console.log("Express server listening on port %d", port)
+}

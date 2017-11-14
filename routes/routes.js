@@ -9,7 +9,7 @@ router.get('/', function(req, res) {
 });
 
 /* GET home page. */
-router.get('/wallet:key', function(req, res) {
+router.get('/wallet', function(req, res) {
   var request = require('request');
   var key = req.params.key;
 

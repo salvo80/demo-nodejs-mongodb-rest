@@ -5,49 +5,91 @@ var router = express.Router();
 
 /* GET home page. */
 router.get('/', function(req, res) {
-  mongodb.getVal(res);
+    mongodb.getVal(res);
 });
 
-/* GET home page. */
+/* GET wallet */
 router.get('/wallet', function(req, res) {
-  var request = require('request');
-  var key = req.params.key;
+    var request = require('request');
+    var Q = require('q');
+    var key = req.params.key;
 
-  const body = {};
-  const apiPath = 'v2/auth/r/wallets';
-  const toSend = createRequest(body, apiPath, key);
-  request.post(toSend,
-    function(error, response, body){
-      console.log('error='+error);
-      console.log('body='+body);
-      console.log('response='+response);
-      res.send(body);
+    const body = {};
+    const apiPath = 'v2/auth/r/wallets';
+    const toSend = createRequest(body, apiPath, key);
+    var promises = [];
+    var deferred = Q.defer();
+    request.post(toSend,
+        function(error, response, body){
+            console.log('error='+error);
+            console.log('body='+body);
+            console.log('response='+response);
+
+            deferred.resolve(body);
+
+        }
+    );
+    promises.push(deferred.promise);
+    deferred = Q.defer();
+    request.post(toSend,
+        function(error, response, body){
+            console.log('error='+error);
+            console.log('body='+body);
+            console.log('response='+response);
+
+            deferred.resolve(body);
+
+        }
+    );
+    promises.push({site:'bitfinex',content: deferred.promise});
+    var a = Q.all(promises);
+    var ret = [];
+    for(i in a['bitfinex']){
+        var b = a['bitfinex'][i];
+        ret.push(['bitfinex',b[1],b[2]]);
     }
-  );
+    res.send(ret);
+});
 
+/* GET active orders */
+router.get('/orders', function(req, res) {
+    var request = require('request');
+    var key = req.params.key;
+
+    const body = {};
+    const apiPath = 'v2/auth/r/orders';
+    const toSend = createRequest(body, apiPath, key);
+    request.post(toSend,
+        function(error, response, body){
+            console.log('error='+error);
+            console.log('body='+body);
+            console.log('response='+response);
+            res.send(body);
+        }
+    );
 });
 
 router.post('/values', function(req, res) {
-  res.setHeader('Content-Type', 'application/json');
-  var val = req.body.value;
+    res.setHeader('Content-Type', 'application/json');
+    var val = req.body.value;
 
-  if (val === undefined || val === "") {
-    res.send(JSON.stringify({status: "error", value: "Value undefined"}));
-    return
-  }
-  mongodb.sendVal(val, res);
+    if (val === undefined || val === "") {
+        res.send(JSON.stringify({status: "error", value: "Value undefined"}));
+        return
+    }
+    mongodb.sendVal(val, res);
 });
 
 router.delete('/values/:id', function(req, res) {
-  res.setHeader('Content-Type', 'application/json');
-  var uuid = req.params.id;
+    res.setHeader('Content-Type', 'application/json');
+    var uuid = req.params.id;
 
-  if (uuid === undefined || uuid === "") {
-    res.send(JSON.stringify({status: "error", value: "UUID undefined"}));
-    return
-  }
-  mongodb.delVal(uuid);
-  res.send(JSON.stringify({status: "ok", value: uuid}));
+    if (uuid === undefined || uuid === "") {
+        res.send(JSON.stringify({status: "error", value: "UUID undefined"}));
+        return
+    }
+    mongodb.delVal(uuid);
+    res.send(JSON.stringify({status: "ok", value: uuid}));
 });
 
 module.exports = router;

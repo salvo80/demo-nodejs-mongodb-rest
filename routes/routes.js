@@ -29,7 +29,7 @@ router.get('/wallet', function(req, res) {
 
         }
     );
-    promises.push({'bitfinex': deferred.promise});
+    promises.push(deferred.promise);
     /*deferred = Q.defer();
     request.post(toSend,
         function(error, response, body){
@@ -44,9 +44,9 @@ router.get('/wallet', function(req, res) {
     promises.push({site:'bitfinex',content: deferred.promise});*/
     var a = Q.all(promises);
     var ret = [];
-    for(i in a['bitfinex']){
+    for(i in a[0]){
         console.log('i='+i);
-        var b = a['bitfinex'][i];
+        var b = a[0][i];
         ret.push(['bitfinex',b[1],b[2]]);
     }
     res.send(ret);

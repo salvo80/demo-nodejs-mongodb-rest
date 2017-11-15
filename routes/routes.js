@@ -11,45 +11,49 @@ router.get('/', function(req, res) {
 /* GET wallet */
 router.get('/wallet', function(req, res) {
     var request = require('request');
-    var Q = require('q');
-    var key = req.params.key;
+    var q = require('q');
 
-    const body = {};
-    const apiPath = 'v2/auth/r/wallets';
-    const toSend = createRequest(body, apiPath, key);
-    var promises = [];
-    var deferred = Q.defer();
-    request.post(toSend,
-        function(error, response, body){
-            console.log('error='+error);
-            console.log('body='+body);
-            console.log('response='+response);
-
-            deferred.resolve(body);
-
+  
+    
+    var bitfinexD = q.defer();
+    getBitfinex().wallet_balances((err, res) => {
+        if (err) console.log(err)
+        console.log('res='+res);
+        bitfinexD.resolve(res);
+    });
+    
+  
+   
+    var bittrexD = q.defer();
+    getBittrex().getbalances( function( data, err ) {
+      if (err) {
+        return console.error(err);
+      }
+      bittrexD.resolve(data);
+     
+    });
+    
+    q.spread([bitfinexD.promise, bittrexD.promise], function(bitfinex,bittrex){
+        console.log('bittrex='+bittrex);
+        
+        var ret = [];
+        for(var i in bitfinex){
+            console.log('i='+i);
+            var bb = bitfinex[i];
+            var amount = parseFloat(bb["amount"]);
+            if(amount>0)
+                ret.push(['bitfinex',bb["currency"],amount]);
         }
-    );
-    promises.push(deferred.promise);
-    /*deferred = Q.defer();
-    request.post(toSend,
-        function(error, response, body){
-            console.log('error='+error);
-            console.log('body='+body);
-            console.log('response='+response);
-
-            deferred.resolve(body);
-
+        for(var i in bittrex['result']){
+            console.log('bittrex i='+i);
+            var bb = bittrex['result'][i];
+            const balance = bb["Balance"];
+            if(balance>0)
+                ret.push(['bittrex',bb["Currency"],balance]);
         }
-    );
-    promises.push({site:'bitfinex',content: deferred.promise});*/
-    var a = Q.all(promises);
-    var ret = [];
-    for(i in a[0]){
-        console.log('i='+i);
-        var b = a[0][i];
-        ret.push(['bitfinex',b[1],b[2]]);
-    }
-    res.send(ret);
+        res.send(ret);
+        
+    },function(error){console.error(error);});
 });
 
 /* GET active orders */
@@ -95,11 +99,40 @@ router.delete('/values/:id', function(req, res) {
 
 module.exports = router;
 
+function getBittrex(){
+    const atob = require('atob');
+ 
+    var key = process.env.API2;
+    key = atob('OWJhOTU3Nz'+key).split(',');
 
-function createRequest(body, apiPath, key){
+    const apiKey = key[0];
+    const apiSecret = key[1];
+
+    
+    var bittrex = require('node-bittrex-api');
+    bittrex.options({
+      'apikey' : apiKey,
+      'apisecret' : apiSecret,
+    });
+    return bittrex;
+    
+}
+
+function getBitfinex(){
+    const atob = require('atob');
+    const key = atob('U2JKZWlXM2' + process.env.API).split(',');
+
+    const apiKey = key[0];
+    const apiSecret = key[1];
+    
+    const BFX = require('bitfinex-api-node')
+    return new BFX(apiKey, apiSecret, {version: 1}).rest
+    
+}
+function createRequest(body, apiPath){
     const atob = require('atob');
     const crypto = require('crypto');
-    var key = process.env.API || key;
+    var key = process.env.API;
     key = atob('U2JKZWlXM2'+key).split(',');
 
     const apiKey = key[0];
@@ -124,6 +157,5 @@ function createRequest(body, apiPath, key){
         body: body,
         json: true
     }
-    console.log('url='+options.url);
     return options;
 }
